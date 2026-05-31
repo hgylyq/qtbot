@@ -160,6 +160,38 @@ def test_main_agent_warns_model_about_unsupported_content() -> None:
     asyncio.run(run())
 
 
+def test_main_agent_warns_model_about_configured_multimodal_gap() -> None:
+    async def run() -> None:
+        llm = FakeLLM()
+        memory = FakeMemory(DialogueContext(role_id="default", room="private_1"))
+        agent = MainAgent(
+            llm=llm,
+            model="test",
+            search_agent=FakeSearchAgent(),
+            memory=memory,
+            dialogue_context_limit=10000,
+            dialogue_compact_target=3000,
+            enabled_multimodal_types={"image"},
+        )
+        incoming = IncomingMessage(
+            message_id=1,
+            scope=MessageScope(message_type="private", user_id=1),
+            raw_text="这张图是什么",
+            text="这张图是什么",
+            unsupported_content_types=("image",),
+        )
+        role = RoleCard(id="default", name="Default", persona="P")
+
+        await agent.reply(incoming=incoming, role=role)
+
+        prompt = "\n".join(message["content"] for message in llm.messages)
+        assert "runtime configuration exposes multimodal support" in prompt
+        assert "not implemented yet" in prompt
+        assert "Do not infer or describe" in prompt
+
+    asyncio.run(run())
+
+
 def test_main_agent_system_prompt_preserves_qq_at_codes() -> None:
     async def run() -> None:
         llm = FakeLLM()

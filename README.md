@@ -19,6 +19,7 @@
 - **长期记忆**：使用 MemPalace 保存可检索记忆，并提供 transcript fallback；记忆按 `role_id + room` 隔离，避免跨角色、跨用户污染。
 - **短期上下文压缩**：持续对话先累积到 dialogue context，超过 token 上限后自动 compact，控制模型输入长度。
 - **OpenAI 兼容接口**：直接请求 `/v1/chat/completions`，可接入 OpenAI 或其他兼容网关。
+- **显式多模态配置**：通过 `.env` 暴露多模态开关和类型列表，当前默认纯文本，便于后续接入图片理解时保持配置兼容。
 - **可运维脚本**：提供 Windows 下的启动、停止、重启脚本，维护 pid、stdout、stderr 日志。
 - **测试覆盖核心路径**：测试覆盖消息解析、命令调度、角色存储、搜索摘要、记忆隔离、上下文压缩、tokenizer 和配置优先级。
 
@@ -144,6 +145,7 @@ Dialogue context 文件结构：
 - 搜索服务异常时，主 Agent 记录日志并继续无搜索回复。
 - `tiktoken` 不可用时，退回近似 token 计数。
 - 图片、语音、视频、文件等非文本消息不会传给模型，bot 会提示用户改用文字描述。
+- 多模态配置可以显式打开支持类型显示，但当前版本还没有实现 OneBot 媒体文件下载和多模态模型消息组装。
 
 ## 功能
 
@@ -203,6 +205,8 @@ MAIN_MODEL=gpt-4.1-mini
 SEARCH_MODEL=gpt-4.1-mini
 ROLE_MODEL=gpt-4.1-mini
 TOKENIZER_ENCODING=cl100k_base
+MULTIMODAL_ENABLED=false
+MULTIMODAL_TYPES=image
 
 TAVILY_MCP_URL=https://tavily.ivanli.cc/mcp
 TAVILY_MCP_AUTHORIZATION=Bearer replace-with-token
@@ -265,6 +269,8 @@ NapCat 需要开启 OneBot WebSocket Server。建议配置：
 | `SEARCH_MODEL` | 搜索摘要模型 |
 | `ROLE_MODEL` | 角色卡生成模型 |
 | `TOKENIZER_ENCODING` | tiktoken 编码名 |
+| `MULTIMODAL_ENABLED` | 是否显示启用多模态入口，默认 `false` |
+| `MULTIMODAL_TYPES` | 显示启用的多模态类型，多个用逗号分隔，例如 `image,audio` |
 | `TAVILY_MCP_URL` | Tavily MCP server 地址 |
 | `TAVILY_MCP_AUTHORIZATION` | Tavily MCP 鉴权头 |
 | `TAVILY_MCP_TOOL` | 指定 MCP 工具名，留空时自动选择 |
@@ -275,6 +281,8 @@ NapCat 需要开启 OneBot WebSocket Server。建议配置：
 | `DIALOGUE_COMPACT_TARGET` | compact 后目标 token 数 |
 
 `.env` 优先于系统环境变量，修改后重启 bot 生效。不要提交真实 key、Tavily token、NapCat token。
+
+当前多模态配置用于显式展示能力开关和未来接入范围。即使 `MULTIMODAL_ENABLED=true`，当前版本仍不会下载 OneBot 媒体文件，也不会把图片、语音、视频或文件字节传给模型。
 
 ## 测试
 
@@ -317,6 +325,7 @@ data/runtime/               pid 和运行日志
 - **本地 transcript fallback**：当 MemPalace 不可用时，bot 仍能基于本地记录检索历史。
 - **token 级上下文控制**：使用 `tiktoken` 而不是简单按轮数裁剪，更接近模型真实输入限制。
 - **Search SubAgent**：把搜索摘要和最终表达拆开，降低主回复 prompt 的复杂度。
+- **多模态先配置化**：先把能力边界变成显式参数，避免后续接入图片理解时破坏配置格式或用户提示语义。
 
 ## 常见问题
 

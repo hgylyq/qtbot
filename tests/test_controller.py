@@ -105,6 +105,32 @@ def test_help_alias_without_prefix_lists_available_commands(tmp_path) -> None:
     asyncio.run(run())
 
 
+def test_help_shows_multimodal_status(tmp_path) -> None:
+    async def run() -> None:
+        store = RoleStore(roles_dir=tmp_path / "roles", state_path=tmp_path / "state.yaml")
+        memory = MemoryStore(
+            palace_path=tmp_path / "palace",
+            transcripts_dir=tmp_path / "transcripts",
+            auto_mine=False,
+            enable_mempalace=False,
+        )
+        controller = BotController(
+            role_store=store,
+            role_generator=FakeGenerator(),
+            main_agent=FakeAgent(),
+            memory=memory,
+            owner_ids={1},
+            enabled_multimodal_types={"image"},
+        )
+
+        reply = await controller.handle(make_incoming("/帮助"))
+
+        assert "多模态：配置已启用 图片" in reply
+        assert "尚未接入媒体文件下载" in reply
+
+    asyncio.run(run())
+
+
 def test_non_owner_cannot_generate_role(tmp_path) -> None:
     async def run() -> None:
         store = RoleStore(roles_dir=tmp_path / "roles", state_path=tmp_path / "state.yaml")
@@ -204,6 +230,40 @@ def test_image_only_message_gets_text_fallback_prompt(tmp_path) -> None:
 
         assert reply is not None
         assert "当前模型不能查看非文本内容" in reply
+
+    asyncio.run(run())
+
+
+def test_image_only_message_mentions_configured_multimodal_entry(tmp_path) -> None:
+    async def run() -> None:
+        store = RoleStore(roles_dir=tmp_path / "roles", state_path=tmp_path / "state.yaml")
+        memory = MemoryStore(
+            palace_path=tmp_path / "palace",
+            transcripts_dir=tmp_path / "transcripts",
+            auto_mine=False,
+            enable_mempalace=False,
+        )
+        controller = BotController(
+            role_store=store,
+            role_generator=FakeGenerator(),
+            main_agent=FakeAgent(),
+            memory=memory,
+            owner_ids={1},
+            enabled_multimodal_types={"image"},
+        )
+        incoming = make_incoming("")
+        incoming = IncomingMessage(
+            message_id=incoming.message_id,
+            scope=incoming.scope,
+            raw_text=incoming.raw_text,
+            text=incoming.text,
+            unsupported_content_types=("image",),
+        )
+
+        reply = await controller.handle(incoming)
+
+        assert "当前配置显示已启用图片多模态入口" in reply
+        assert "尚未接入" in reply
 
     asyncio.run(run())
 

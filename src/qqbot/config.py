@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     search_model: str = Field(default="gpt-4.1-mini", alias="SEARCH_MODEL")
     role_model: str = Field(default="gpt-4.1-mini", alias="ROLE_MODEL")
     tokenizer_encoding: str = Field(default="cl100k_base", alias="TOKENIZER_ENCODING")
+    multimodal_enabled: bool = Field(default=False, alias="MULTIMODAL_ENABLED")
+    multimodal_types: str = Field(default="image", alias="MULTIMODAL_TYPES")
 
     tavily_mcp_url: str = Field(default="https://tavily.ivanli.cc/mcp", alias="TAVILY_MCP_URL")
     tavily_mcp_authorization: str | None = Field(default=None, alias="TAVILY_MCP_AUTHORIZATION")
@@ -56,6 +58,15 @@ class Settings(BaseSettings):
                 continue
             ids.add(int(value))
         return ids
+
+    def enabled_multimodal_types(self) -> set[str]:
+        if not self.multimodal_enabled:
+            return set()
+        return {
+            value
+            for part in self.multimodal_types.replace(";", ",").split(",")
+            if (value := part.strip().lower())
+        }
 
     def ensure_dirs(self) -> None:
         self.roles_dir.mkdir(parents=True, exist_ok=True)

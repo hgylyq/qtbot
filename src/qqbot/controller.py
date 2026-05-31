@@ -24,6 +24,7 @@ class BotController:
         memory: MemoryStore,
         owner_ids: set[int],
         prefix: str = "/",
+        enabled_multimodal_types: set[str] | None = None,
     ) -> None:
         self.role_store = role_store
         self.role_generator = role_generator
@@ -31,6 +32,7 @@ class BotController:
         self.memory = memory
         self.owner_ids = owner_ids
         self.prefix = prefix
+        self.enabled_multimodal_types = enabled_multimodal_types or set()
 
     async def handle(self, incoming: IncomingMessage) -> str | None:
         text = incoming.text.strip()
@@ -113,9 +115,16 @@ class BotController:
     def _normalize_command(command: str) -> str:
         return "".join(command.lower().split())
 
-    @staticmethod
-    def _unsupported_content_prompt(types: tuple[str, ...]) -> str:
-        labels = BotController._unsupported_content_labels(types)
+    def _unsupported_content_prompt(self, types: tuple[str, ...]) -> str:
+        labels = self._unsupported_content_labels(types)
+        enabled = sorted(set(types) & self.enabled_multimodal_types)
+        if enabled:
+            enabled_labels = self._unsupported_content_labels(tuple(enabled))
+            return (
+                f"用户发送了{labels}。当前配置显示已启用{enabled_labels}多模态入口，"
+                "但 OneBot 媒体文件下载和模型多模态消息组装尚未接入。"
+                "请说明暂时只能处理文字，或请对方先用文字描述内容。"
+            )
         return (
             f"用户发送了{labels}，但当前模型不能查看非文本内容。"
             "请不要猜测内容，用当前角色简短说明只能处理文字，并请对方用文字描述。"
@@ -156,9 +165,16 @@ class BotController:
                 "/清除memory",
                 "/清除全部",
                 "",
+                f"多模态：{self._multimodal_status()}",
                 "权限：角色生成、编辑、删除、切换需要管理员；其他指令只作用于当前聊天对象。",
             ]
         )
+
+    def _multimodal_status(self) -> str:
+        if not self.enabled_multimodal_types:
+            return "未启用，当前只处理文字。"
+        labels = self._unsupported_content_labels(tuple(sorted(self.enabled_multimodal_types)))
+        return f"配置已启用 {labels}，但当前版本尚未接入媒体文件下载和多模态模型消息。"
 
     def _show_role(self, command: str) -> str:
         parts = command.split(maxsplit=1)

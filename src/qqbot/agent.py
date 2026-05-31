@@ -49,6 +49,7 @@ class MainAgent:
         dialogue_context_limit: int = 8000,
         dialogue_compact_target: int = 3000,
         tokenizer_encoding: str = "cl100k_base",
+        enabled_multimodal_types: set[str] | None = None,
     ) -> None:
         self.llm = llm
         self.model = model
@@ -57,6 +58,7 @@ class MainAgent:
         self.dialogue_context_limit = dialogue_context_limit
         self.dialogue_compact_target = dialogue_compact_target
         self.token_counter = TokenCounter(model=model, encoding_name=tokenizer_encoding)
+        self.enabled_multimodal_types = enabled_multimodal_types or set()
 
     async def reply(
         self,
@@ -223,6 +225,15 @@ class MainAgent:
 
     def _unsupported_content_prompt(self, incoming: IncomingMessage) -> str:
         labels = ", ".join(incoming.unsupported_content_types)
+        enabled = sorted(set(incoming.unsupported_content_types) & self.enabled_multimodal_types)
+        if enabled:
+            return (
+                "The user also sent non-text content in this message: "
+                f"{labels}. The runtime configuration exposes multimodal support for: {', '.join(enabled)}, "
+                "but media file download and multimodal model message assembly are not implemented yet. "
+                "No image, audio, video, or file bytes are available in this prompt. "
+                "Do not infer or describe the content; ask the user to describe it in text."
+            )
         return (
             "The user also sent unsupported non-text content in this message: "
             f"{labels}. This bot receives text only; no image, audio, video, or file bytes are available. "

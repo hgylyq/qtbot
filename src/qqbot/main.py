@@ -46,6 +46,7 @@ def build_controller(settings: Settings) -> BotController:
         dialogue_context_limit=settings.dialogue_context_limit,
         dialogue_compact_target=settings.dialogue_compact_target,
         tokenizer_encoding=settings.tokenizer_encoding,
+        enabled_multimodal_types=settings.enabled_multimodal_types(),
     )
     role_generator = RoleCardGenerator(llm, model=settings.role_model)
     return BotController(
@@ -55,6 +56,7 @@ def build_controller(settings: Settings) -> BotController:
         memory=memory,
         owner_ids=settings.owner_ids(),
         prefix=settings.bot_prefix,
+        enabled_multimodal_types=settings.enabled_multimodal_types(),
     )
 
 
