@@ -1,0 +1,13 @@
+.env
+data/
+napcat/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.log
+*.pid
+.venv/
+.ruff_cache/
